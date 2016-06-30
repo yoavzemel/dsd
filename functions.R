@@ -1,5 +1,5 @@
-####### calculate optimal h
 maxGrad <- function(z, p, q)
+####### calculate optimal h and the dsd
 {
 	if((n <- length(z)) != length(p)) stop("length of z and q need to be the same")
 	if(n != length(q)) stop("length of z and p need to be the same")
@@ -10,7 +10,6 @@ maxGrad <- function(z, p, q)
 	
 	if(UNSORTED <- is.unsorted(z))
 	{
-		warning("z is unsorted")
 		or <- order(z)
 		z <- z[or]
 		p <- p[or]
@@ -18,18 +17,40 @@ maxGrad <- function(z, p, q)
 	}
 
 	cumdiff <- (cumsum(p) - cumsum(q) )[-n]
-	if(any(cumdiff == 0))	warning("maximiser is not unique")
+	UNIQUE <- !any(0 == cumdiff)
 	z.diff <- diff(z)
 	hdiff <- z.diff * sign(cumdiff) # represent h(z[k]) - h(z[k-1])
-	h1 <- 0 # arbitrary value for h(z1)
-	maxGrad <- cumsum(c(h1, hdiff)) # represent h(z[k])
+	maxGrad <- cumsum(c(0, hdiff)) # represent h(z[k]);  arbitrary value for h(z[1])
 	maxGrad <- maxGrad - sum(maxGrad * p) # make h have zero mean (with respect to the measure that gives pk mass to zk)
 	
 #	if(!isTRUE(all.equal(sum(z.diff * abs(cumdiff)  ), sum(maxGrad * (q - p)))))	stop("maximiser did not attain maximal value")
 
-	if(UNSORTED)	maxGrad[order(or)]	else	maxGrad
+	list(h = if(UNSORTED)	maxGrad[order(or)]	else	maxGrad, dsd = sum(z.diff * abs(cumdiff)), UNIQUE = UNIQUE)
 }
 
+distSelGrad <- function(Z, W)
+  ####### Z matrix of m traits of n individuals, W vector of fitness
+{
+  m <- dim(Z)
+  if((n <- length(W)) != m[1]) stop("nrow(Z) should equal length(W)")
+  if(any(W < 0))	stop("W should be nonnegative")
+  if(all(W == 0))	stop("W should have at least one positive value")
+  w <- W / sum(W)	#make it sum up to one (NOT have mean 1 like in text!)
+  p <- rep(1/n, n)
+  m <- m[2]	# number of traits
+  DSD <- numeric(m)
+  H <- Z		# maximisers
+  for(i in 1:m)
+  {
+    res <- maxGrad(Z[, i], p = p, q = w)
+    H[, i] <- res$h
+    DSD[i] <- res$dsd
+  }
+  
+  # the selection gradients are given by the below formula because colSums(H) == 0 so t(H) %*% H is proportional to cov(H)
+  # an alternative formula is lm(w*n - 1 ~ -1 + H)$coefficients, and since colSums(H) == 0 this is the same as lm(w*n ~ H)$coefficients[-1]
+  list(DSD = DSD, matGrad = H, sgrad = as.vector(n * solve(t(H) %*% H) %*% DSD))
+}
 
 minFlow <- function(z, p, q)
 {
