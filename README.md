@@ -9,6 +9,7 @@ Requires the R package lpSolve for the calculation of the optimal flow.
 
 | Function | Description |
 | --- | --- |
+| distSelGrad | calculates the distributional selection gradients and the distributional selection differentials for a given matrix of trait values and a given vector of (absolute) fitness  |
 | maxGrad | calculates the (standardised) maximiser h  |
 | minFlow | calculates the optimal flow |
 | flowDecomposition | calculates the decomposition of a given flow into a directional and nondirectional flow |
